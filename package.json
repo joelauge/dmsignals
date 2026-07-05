@@ -1,7 +1,7 @@
 {
-  "name": "new-dm-radar",
-  "version": "1.0.0",
-  "description": "Cloudflare Worker that monitors Reddit for first-time DM signals and emails a daily digest via Resend.",
+  "name": "dmsignals",
+  "version": "2.0.0",
+  "description": "Cloudflare Worker that monitors Reddit for DM/GM equipment-need signals, drafts replies with Claude Haiku, tracks inbox replies, and emails a daily digest via Resend.",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",

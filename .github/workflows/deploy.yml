@@ -2,7 +2,7 @@ name: Deploy Worker
 on:
   push:
     branches: [main]
-    paths: ["worker/**"]
+    paths: ["src/**", "wrangler.toml", "package.json"]
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -11,4 +11,3 @@ jobs:
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: worker
