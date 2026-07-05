@@ -52,7 +52,10 @@
       "scope": "user"
     },
     "http": {
-      "domains": ["api.anthropic.com", "api.resend.com"]
+      "domains": [
+        "api.anthropic.com",
+        "api.resend.com"
+      ]
     }
   },
   "settings": {
@@ -87,5 +90,8 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build"
+  },
+  "dev": {
+    "subreddit": "dmradarreact_dev"
   }
 }

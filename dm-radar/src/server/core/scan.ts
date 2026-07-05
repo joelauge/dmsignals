@@ -65,18 +65,40 @@ export async function runScan(): Promise<Day> {
   // 1. Gather fresh posts (last ~26h) from each subreddit, keyword-filtered, deduped.
   const candidates: Record<string, unknown>[] = [];
   let total = 0;
+  let tooOld = 0;
+  let noKeyword = 0;
+  let alreadySeen = 0;
   for (const subName of SUBREDDITS) {
-    const listing = await reddit.getNewPosts({ subredditName: subName, limit: 25 }).all();
+    let listing;
+    try {
+      listing = await reddit.getNewPosts({ subredditName: subName, limit: 25 }).all();
+    } catch (error) {
+      console.error(`scan: fetching r/${subName} failed: ${error}`);
+      continue;
+    }
+    let subFresh = 0;
     for (const post of listing) {
       total++;
       const ageHrs = (Date.now() - post.createdAt.getTime()) / 3.6e6;
-      if (ageHrs > 26) continue;
+      if (ageHrs > 26) {
+        tooOld++;
+        continue;
+      }
+      subFresh++;
       const body = (post.body ?? '').slice(0, 1500);
-      if (!KEYWORDS.test(post.title + ' ' + body)) continue;
+      if (!KEYWORDS.test(post.title + ' ' + body)) {
+        noKeyword++;
+        continue;
+      }
 
       const seen = await redis.get(`seen:${post.permalink}`);
-      if (seen) continue;
+      if (seen) {
+        alreadySeen++;
+        console.log(`scan: r/${subName} skipping already-drafted: "${post.title.slice(0, 60)}"`);
+        continue;
+      }
 
+      console.log(`scan: r/${subName} candidate: "${post.title.slice(0, 80)}" (${Math.round(ageHrs)}h old)`);
       candidates.push({
         sub: `r/${subName}`,
         author: `u/${post.authorName}`,
@@ -88,7 +110,11 @@ export async function runScan(): Promise<Day> {
         comments: post.numberOfComments,
       });
     }
+    console.log(`scan: r/${subName}: ${listing.length} fetched, ${subFresh} under 26h`);
   }
+  console.log(
+    `scan: totals: ${total} fetched, ${tooOld} too old, ${noKeyword} no keyword match, ${alreadySeen} already drafted, ${candidates.length} candidates for Haiku`
+  );
 
   const day: Day = {
     date,
@@ -104,6 +130,7 @@ export async function runScan(): Promise<Day> {
     const apiKey = (await settings.get<string>('anthropic-api-key')) ?? '';
     if (!apiKey) {
       day.best = 'No anthropic-api-key app setting configured.';
+      console.error('scan: anthropic-api-key setting is empty, skipping drafting');
     } else {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -134,13 +161,18 @@ export async function runScan(): Promise<Day> {
           day.signals = out.signals ?? [];
           day.best = out.best ?? day.best;
           day.found = day.signals.length;
-        } catch {
+          console.log(`scan: Haiku selected ${day.found} of ${candidates.length} candidates`);
+        } catch (error) {
           day.best = 'Failed to parse Haiku output.';
+          console.error(`scan: Haiku output parse failed: ${error}`);
         }
       } else {
         day.best = `Haiku call failed (${res.status}). Check the API key in app settings.`;
+        console.error(`scan: Haiku call failed: ${res.status} ${await res.text()}`);
       }
     }
+  } else {
+    console.log('scan: no candidates, skipping Haiku');
   }
 
   // 3. Check threads drafted on previous days for replies to the owner's comments.
@@ -167,6 +199,9 @@ export async function runScan(): Promise<Day> {
   await sendDigestPm(day);
   await sendDigestEmail(day);
 
+  console.log(
+    `scan: done: ${day.found} signals, ${day.replies.length} replies, ${pruned.length} threads being watched`
+  );
   return day;
 }
 
@@ -179,7 +214,11 @@ async function loadTracked(): Promise<TrackedThread[]> {
 // configured owner username. Each reply is reported once (Redis dedup).
 async function checkReplies(tracked: TrackedThread[]): Promise<Reply[]> {
   const owner = ((await settings.get<string>('digest-username')) ?? '').toLowerCase();
-  if (!owner || !tracked.length) return [];
+  if (!owner || !tracked.length) {
+    console.log(`replies: skipped (owner=${owner ? 'set' : 'NOT SET'}, ${tracked.length} tracked threads)`);
+    return [];
+  }
+  console.log(`replies: checking ${tracked.length} tracked thread(s) for replies to u/${owner}`);
 
   const replies: Reply[] = [];
 
@@ -224,7 +263,10 @@ async function checkReplies(tracked: TrackedThread[]): Promise<Reply[]> {
 
 async function sendDigestPm(day: Day): Promise<void> {
   const to = await settings.get<string>('digest-username');
-  if (!to) return;
+  if (!to) {
+    console.log('digest: PM skipped, digest-username setting is empty');
+    return;
+  }
 
   const lines = day.signals
     .map(
@@ -247,7 +289,10 @@ async function sendDigestPm(day: Day): Promise<void> {
 async function sendDigestEmail(day: Day): Promise<void> {
   const apiKey = await settings.get<string>('resend-api-key');
   const to = await settings.get<string>('digest-email');
-  if (!apiKey || !to) return;
+  if (!apiKey || !to) {
+    console.log(`digest: email skipped (key ${apiKey ? 'set' : 'NOT SET'}, to ${to ? 'set' : 'NOT SET'})`);
+    return;
+  }
   const from = (await settings.get<string>('digest-email-from')) ?? 'DM Signals <radar@theultimategamemaster.com>';
 
   const rows = day.signals
