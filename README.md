@@ -75,9 +75,9 @@ Add a `CLOUDFLARE_API_TOKEN` repo secret (Cloudflare dashboard -> API Tokens -> 
 - **Cadence**: crons in `wrangler.toml`.
 - **Drafting rules / product context**: `PRODUCT_CONTEXT` and `STYLE_RULES` in `src/index.js` — see the non-negotiable content rules in `CLAUDE.md`.
 
-## dm-radar/ (Devvit companion)
+## dm-radar/ (Devvit app — the primary pipeline)
 
-`dm-radar/` is a separate Devvit app (the `@devvit/web` React + Hono template) that runs natively on Reddit: daily scan, Redis dedup, Haiku drafts, digest as a Reddit PM, and a pinnable dashboard custom post (splash + expanded React views). It runs as its own app account and so **cannot** read your personal inbox — that stays the Worker's job. See `dm-radar/README.md` for its own setup and commands.
+`dm-radar/` is a Devvit app (the `@devvit/web` React + Hono template) that runs natively on Reddit and is the **primary** system: daily scan, Redis dedup, Haiku drafts, thread-based reply tracking (re-scans drafted threads for replies to your comments), digest as a Reddit PM and optionally as a Resend email, and a pinnable dashboard custom post (splash + expanded React views). It needs no Reddit OAuth credentials — Devvit apps get native API access. The Cloudflare Worker above is a dormant alternative: it covers true inbox reading and a public web dashboard, but requires script-app credentials (client ID/secret + account password), which Reddit now steers developers away from in favor of Devvit. See `dm-radar/README.md` for setup and commands.
 
 ## Notes
 

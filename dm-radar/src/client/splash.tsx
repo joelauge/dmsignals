@@ -21,6 +21,7 @@ export const Splash = () => {
       {day ? (
         <p className="text-sm text-gray-600 dark:text-gray-300">
           {day.date} · {day.found} signal(s) today
+          {(day.replies ?? []).length > 0 ? ` · ${day.replies.length} replies to you` : ''}
         </p>
       ) : (
         <p className="text-sm text-gray-500 dark:text-gray-400">Loading…</p>

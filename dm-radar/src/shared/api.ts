@@ -10,12 +10,21 @@ export type Signal = {
   draft: string;
 };
 
+export type Reply = {
+  from: string;
+  thread: string;
+  url: string;
+  snippet: string;
+  received: string;
+};
+
 export type Day = {
   date: string;
   scanned: string;
   found: number;
   best: string;
   signals: Signal[];
+  replies: Reply[];
 };
 
 export type LatestResponse = Day;

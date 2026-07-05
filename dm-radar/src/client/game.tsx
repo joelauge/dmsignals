@@ -3,7 +3,7 @@ import './index.css';
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { navigateTo, showToast } from '@devvit/web/client';
-import type { Day, Signal } from '../shared/api';
+import type { Day, Reply, Signal } from '../shared/api';
 
 const strengthColor: Record<Signal['strength'], string> = {
   High: 'bg-green-100 text-green-800',
@@ -58,6 +58,22 @@ const SignalCard = ({ signal }: { signal: Signal }) => (
   </div>
 );
 
+const ReplyCard = ({ reply }: { reply: Reply }) => (
+  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+    <div className="text-xs text-gray-500 dark:text-gray-400">
+      <span className="font-semibold text-gray-700 dark:text-gray-200">{reply.from}</span> on "{reply.thread}" ·{' '}
+      {reply.received}
+    </div>
+    <p className="text-sm text-gray-700 dark:text-gray-200 italic mt-2">"{reply.snippet}"</p>
+    <button
+      className="text-xs font-semibold border border-amber-300 dark:border-amber-700 rounded-lg px-3 py-1.5 cursor-pointer mt-2"
+      onClick={() => navigateTo(reply.url)}
+    >
+      Open thread
+    </button>
+  </div>
+);
+
 export const App = () => {
   const [day, setDay] = useState<Day | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +107,20 @@ export const App = () => {
             🎟 FIRSTTIMEGM = free Session Zero Checklist for brand-new GMs. Use only when it truly fits. Drafts are
             never auto-posted — copy, tweak, post manually.
           </p>
-          <div className="flex flex-col gap-3 mt-4">
+          {(day.replies ?? []).length > 0 && (
+            <>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 mt-5">
+                Replies to you ({day.replies.length})
+              </h2>
+              <div className="flex flex-col gap-3 mt-2">
+                {day.replies.map((r, i) => (
+                  <ReplyCard key={i} reply={r} />
+                ))}
+              </div>
+            </>
+          )}
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 mt-5">Today's signals</h2>
+          <div className="flex flex-col gap-3 mt-2">
             {day.signals.map((s, i) => (
               <SignalCard key={i} signal={s} />
             ))}

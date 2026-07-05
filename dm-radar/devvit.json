@@ -52,7 +52,7 @@
       "scope": "user"
     },
     "http": {
-      "domains": ["api.anthropic.com"]
+      "domains": ["api.anthropic.com", "api.resend.com"]
     }
   },
   "settings": {
@@ -61,12 +61,26 @@
         "type": "string",
         "label": "Anthropic API key (Claude Haiku drafting)",
         "isSecret": true
+      },
+      "resend-api-key": {
+        "type": "string",
+        "label": "Resend API key (email digest; leave empty to skip email)",
+        "isSecret": true
       }
     },
     "subreddit": {
       "digest-username": {
         "type": "string",
-        "label": "Reddit username to DM the daily digest to (no u/ prefix)"
+        "label": "Reddit username to DM the daily digest to (no u/ prefix). Also used to find replies to your posted comments in drafted threads."
+      },
+      "digest-email": {
+        "type": "string",
+        "label": "Email address for the daily digest (leave empty to skip email)"
+      },
+      "digest-email-from": {
+        "type": "string",
+        "label": "Verified Resend sender address",
+        "defaultValue": "DM Signals <radar@theultimategamemaster.com>"
       }
     }
   },
