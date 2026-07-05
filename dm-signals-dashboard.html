@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DM Equipment Signals</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f6f4ef; color: #1f1b16; padding: 24px; line-height: 1.5;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 1.45rem; letter-spacing: -0.01em; }
+  .sub { color: #6b6257; font-size: 0.9rem; margin-top: 4px; }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .stat {
+    background: #fff; border: 1px solid #e5dfd4; border-radius: 10px;
+    padding: 8px 14px; font-size: 0.85rem; color: #4a4238;
+  }
+  .stat b { color: #1f1b16; font-size: 1.05rem; margin-right: 4px; }
+  .best {
+    margin-top: 14px; background: #fdf3e0; border: 1px solid #ecd9b4;
+    border-radius: 10px; padding: 10px 14px; font-size: 0.9rem;
+  }
+  .card {
+    background: #fff; border: 1px solid #e5dfd4; border-radius: 14px;
+    padding: 18px 20px; margin-top: 16px; transition: opacity 0.2s;
+  }
+  .card.posted { opacity: 0.55; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 3px 9px; border-radius: 999px;
+  }
+  .high { background: #e8f5e2; color: #2c6b1e; }
+  .medium { background: #fdf0d5; color: #8a6410; }
+  .low { background: #eeeae3; color: #6b6257; }
+  .repeat { background: #f3e3e0; color: #9c3b2e; }
+  .meta { font-size: 0.8rem; color: #8a8072; }
+  .card h2 { font-size: 1.05rem; margin: 10px 0 4px; }
+  .card h2 a { color: #1f1b16; text-decoration: none; border-bottom: 1px solid #d8cfc0; }
+  .card h2 a:hover { border-bottom-color: #1f1b16; }
+  .summary { font-size: 0.9rem; color: #4a4238; margin-bottom: 6px; }
+  .whyfit { font-size: 0.85rem; color: #6b6257; font-style: italic; margin-bottom: 12px; }
+  textarea {
+    width: 100%; min-height: 150px; resize: vertical;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.82rem;
+    line-height: 1.55; padding: 12px; border: 1px solid #e0d9cc; border-radius: 10px;
+    background: #faf8f4; color: #2a251e;
+  }
+  textarea:focus { outline: 2px solid #c9b88a; border-color: transparent; }
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  button.copy {
+    background: #1f1b16; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 16px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  }
+  button.copy:hover { background: #3a332a; }
+  button.copy.done { background: #2c6b1e; }
+  a.open {
+    font-size: 0.85rem; color: #6b6257; text-decoration: none;
+    border: 1px solid #e0d9cc; border-radius: 8px; padding: 7px 14px; background: #fff;
+  }
+  a.open:hover { border-color: #b8ad9a; }
+  label.posted-toggle {
+    margin-left: auto; font-size: 0.82rem; color: #6b6257;
+    display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;
+  }
+  h3.section {
+    margin-top: 34px; font-size: 1.05rem; display: flex; align-items: center; gap: 10px;
+  }
+  h3.section .count {
+    font-size: 0.75rem; background: #eeeae3; color: #6b6257;
+    border-radius: 999px; padding: 2px 10px; font-weight: 600;
+  }
+  .hist-item {
+    background: #fff; border: 1px solid #e5dfd4; border-radius: 12px;
+    margin-top: 10px; padding: 0;
+  }
+  .hist-item summary {
+    cursor: pointer; padding: 12px 16px; display: flex; align-items: center;
+    gap: 8px; flex-wrap: wrap; list-style: none;
+  }
+  .hist-item summary::-webkit-details-marker { display: none; }
+  .hist-item summary .title { font-weight: 600; font-size: 0.92rem; }
+  .hist-item.answered summary .title { color: #6b6257; }
+  .hist-body { padding: 0 16px 14px; }
+  .hist-body textarea { min-height: 110px; }
+  .status-dot {
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  }
+  .dot-posted { background: #2c6b1e; }
+  .dot-skipped { background: #b8ad9a; }
+  .hist-meta { font-size: 0.78rem; color: #8a8072; margin-left: auto; }
+  .toolbar { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
+  button.ghost {
+    background: #fff; border: 1px solid #e0d9cc; border-radius: 8px;
+    padding: 6px 12px; font-size: 0.8rem; color: #6b6257; cursor: pointer;
+  }
+  button.ghost:hover { border-color: #b8ad9a; }
+  .empty { color: #a29885; font-size: 0.85rem; margin-top: 10px; }
+  .footer { margin-top: 24px; font-size: 0.78rem; color: #a29885; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎲 DM Equipment Signals</h1>
+    <div class="sub" id="run-date"></div>
+    <div class="stats" id="stats"></div>
+    <div class="best" id="best"></div>
+  </header>
+
+  <div class="best" style="background:#eef3e6;border-color:#cfdcb8;">🎟 <b>FIRSTTIMEGM</b> coupon: free Session Zero Checklist for new GMs. Drop it into a reply only when it genuinely fits (a brand-new GM heading into their first session or session zero).</div>
+
+  <main id="cards"></main>
+
+  <h3 class="section">Replies to you <span class="count" id="reply-count">0</span></h3>
+  <div class="sub">People who responded to your posted comments, found during the daily scan. Requires being logged into Reddit in Chrome.</div>
+  <div id="replies"></div>
+
+  <h3 class="section">History <span class="count" id="hist-count">0</span></h3>
+  <div class="sub">Everything seen on previous days, answered or not. Used to avoid repeating yourself.</div>
+  <div id="history"></div>
+  <div class="toolbar">
+    <button class="ghost" id="export">Copy history as JSON</button>
+    <button class="ghost" id="clear">Clear history</button>
+  </div>
+
+  <div class="footer">Drafts are never auto-posted. Edit, copy, post manually. History and posted state live in this page's local storage.</div>
+</div>
+
+<script id="signal-data" type="application/json">
+{
+  "date": "2026-07-04",
+  "scanned": "~125 posts across r/DMAcademy, r/DungeonMasters, r/DnD, r/dndnext, r/rpg",
+  "found": 5,
+  "best": "SneakyKreebz (r/DnD), Roll20 to first in-person game, explicitly shopping for a screen, inserts, and tokens. Thread ~2h old with 2 comments, reply soon for top placement. Note: competitor \"Farsight\" is self-promoting in the NPC-portrait thread.",
+  "replies": [],
+  "signals": [
+    {
+      "strength": "High",
+      "sub": "r/DnD",
+      "author": "u/SneakyKreebz",
+      "meta": "1 hr old · 2 comments",
+      "title": "Transitioning from Digital to Physical DM'ing (Advice request)",
+      "url": "https://old.reddit.com/r/DnD/comments/1unlk01/transitioning_from_digital_to_physical_dming/",
+      "summary": "Roll20 DM running their first in-person game. No DM screen yet (using ring binders, needs inserts), laminating maps, wants monster tokens, asking about session 0.",
+      "whyfit": "Explicit purchase intent across multiple categories. Young thread, a quality answer lands at the top.",
+      "draft": "Made the same jump a couple years ago. Binder screen is fine to start. The insert that actually matters is your players' stats (AC, passive perception, saves) on one page. You'll look at it constantly.\n\nBefore laminating everything, grab a wet erase mat (~$25). Covers anything your players improvise, and they will.\n\nCheap meeples or numbered bottlecaps beat minis until you know what you actually use.\n\nAlso, you don't have to go full analog. A tablet behind the screen keeps your Roll20 prep habits. Full disclosure, I work on The Ultimate Game Master and we make a magnetic screen with a snap-on tablet holder for that exact setup. But a tablet on a stand works fine too. Upgrade once you know what your table needs."
+    },
+    {
+      "strength": "High",
+      "sub": "r/DMAcademy",
+      "author": "u/Unable-Patient-1376",
+      "meta": "12 hr old · 15 comments · 16 upvotes",
+      "title": "Help with DND table props: how do you display NPC portraits without printing paper?",
+      "url": "https://old.reddit.com/r/DMAcademy/comments/1un693q/help_with_dnd_table_props_how_do_you_display_npc/",
+      "summary": "Weekly in-person DM tired of printed portrait cards. Wants a compact digital display at the table, ideally doubling as an initiative tracker. Asking for firsthand tablet/portable-screen setups.",
+      "whyfit": "Almost a product spec for the Tablet Holder + Initiative Trackers. Top comments dodge the question. Competitor Farsight self-promoted in-thread.",
+      "draft": "Ran a portable monitor setup for about a year. 10-13\" USB-C monitor clipped to the back of the DM screen, fed from the laptop you already prep on.\n\nThree lessons: preload the session's portraits into one folder or slideshow, keep a neutral idle image up between reveals, and turn the brightness down or it backlights your face.\n\nPlayer-facing initiative on the screen kills the \"am I up?\" questions, so yes on the double duty.\n\nFor mounting, full disclosure, I work on The Ultimate Game Master and we make a magnetic tablet holder that snaps onto the screen (plus magnetic initiative trackers if you'd rather keep turn order physical). Any decent clamp works though. The prep habits are the real fix."
+    },
+    {
+      "strength": "Medium",
+      "sub": "r/DnD",
+      "author": "u/Mamali_",
+      "meta": "2 hr old · 35 comments · receptive OP",
+      "title": "Thinking About Becoming a DM. What Should I Know Before I Dive In?",
+      "url": "https://old.reddit.com/r/DnD/comments/1unjgft/thinking_about_becoming_a_dm_what_should_i_know/",
+      "summary": "Player wants to DM, discouraged by two \"forever DM\" friends. Asking for honest pros/cons. OP warmly replies to every comment.",
+      "whyfit": "New DM who'll be acquiring everything in 1-3 months. Trust-building play, deliberately NO product mention.",
+      "draft": "The \"you'll never play again\" thing is a table problem, not a DM problem. Plenty of groups rotate.\n\nStart with a published adventure (Phandelver is popular for a reason), keep it to 3-4 players, and prep situations, not plots. Your players will derail any script in ten minutes anyway.\n\nOne thing nobody mentions: the logistics (initiative, NPC names, who has what condition) are a bigger load than the rules. Grab every cheat sheet you can find and keep your players' stats where you can see them.\n\nYou already have more table time than most first-time DMs. Jump in."
+    },
+    {
+      "strength": "Medium",
+      "sub": "r/dndnext",
+      "author": "u/yourfalseromeo211",
+      "meta": "18 hr old · 6 comments",
+      "title": "New dm(help?)",
+      "url": "https://old.reddit.com/r/dndnext/comments/1un0abf/new_dmhelp/",
+      "summary": "Brand-new DM planning a birthday campaign with brothers. Shaky on rules, loves storytelling, struggling with the mental load.",
+      "whyfit": "Stated pain = mental load of running the game. Warm personal thread, value-first with no pitch.",
+      "draft": "Running for your brothers is the best possible first table. They'll forgive everything.\n\nYou don't need the rules in your head, just within reach. Print a one-page DM cheat sheet (google \"5e DM cheat sheet\") and prep three things per session: where they start, 2-3 things that might happen, one fight or obstacle. That's it. Make fair calls on the fly and look rules up after.\n\nThe stats/AC stuff clicks after one combat. The storytelling part you already have, and that's the part you can't look up.\n\nNo gear needed either. A cheat sheet taped to a binder is a perfectly good first DM screen."
+    },
+    {
+      "strength": "Low",
+      "sub": "r/rpg",
+      "author": "u/Toerambler",
+      "meta": "10 hr old · 13 comments",
+      "title": "What do you actually need?",
+      "url": "https://old.reddit.com/r/rpg/comments/1un8cbf/what_do_you_actually_need/",
+      "summary": "Meta-discussion: what must a setting provide for a GM to run it cold. About setting content, not equipment.",
+      "whyfit": "Weak commercial signal, but karma/credibility builder in r/rpg (hostile to promotion). Optional.",
+      "draft": "Two or three factions in conflict, a few NPCs with names and wants, and a hook for what's happening right now. That's runnable.\n\nDeep history is mostly padding. It only matters when it's a loaded gun in the current conflict.\n\nThe looked-amazing-but-unrunnable settings are always the same: gorgeous lore, zero hooks. The most useful page any setting can include is \"six things about to go wrong.\""
+    }
+  ]
+}
+</script>
+
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('signal-data').textContent);
+  var HIST_KEY = 'dm-signals-history';
+  var OLD_POSTED_KEY = 'dm-signals-posted';
+
+  // ---- Load history; migrate legacy posted-state key if present ----
+  var history = {};
+  try { history = JSON.parse(localStorage.getItem(HIST_KEY) || '{}'); } catch (e) {}
+  var legacyPosted = {};
+  try { legacyPosted = JSON.parse(localStorage.getItem(OLD_POSTED_KEY) || '{}'); } catch (e) {}
+
+  // ---- Archive today's signals into history (grow-only, keyed by URL) ----
+  var todayUrls = {};
+  data.signals.forEach(function (sig) {
+    todayUrls[sig.url] = true;
+    if (!history[sig.url]) {
+      history[sig.url] = {
+        title: sig.title, sub: sig.sub, author: sig.author,
+        strength: sig.strength, summary: sig.summary, draft: sig.draft,
+        firstSeen: data.date, posted: !!legacyPosted[sig.url]
+      };
+    } else if (legacyPosted[sig.url]) {
+      history[sig.url].posted = true;
+    }
+  });
+  save();
+  localStorage.removeItem(OLD_POSTED_KEY);
+
+  function save() { localStorage.setItem(HIST_KEY, JSON.stringify(history)); }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ---- Header ----
+  document.getElementById('run-date').textContent =
+    'Run of ' + data.date + ' · scanned ' + data.scanned;
+  var high = data.signals.filter(function(s){return s.strength==='High';}).length;
+  var med  = data.signals.filter(function(s){return s.strength==='Medium';}).length;
+  var low  = data.signals.filter(function(s){return s.strength==='Low';}).length;
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><b>' + data.found + '</b> today</div>' +
+    '<div class="stat"><b>' + high + '</b> high</div>' +
+    '<div class="stat"><b>' + med + '</b> medium</div>' +
+    '<div class="stat"><b>' + low + '</b> low</div>' +
+    '<div class="stat"><b>' + Object.keys(history).length + '</b> all-time</div>';
+  document.getElementById('best').innerHTML = '⭐ <b>Best opportunity:</b> ' + esc(data.best);
+
+  // ---- Today's cards ----
+  var cards = document.getElementById('cards');
+  data.signals.forEach(function (sig, i) {
+    var h = history[sig.url];
+    var seenBefore = h && h.firstSeen !== data.date;
+    var card = document.createElement('section');
+    card.className = 'card' + (h.posted ? ' posted' : '');
+    card.innerHTML =
+      '<div class="row">' +
+        '<span class="badge ' + sig.strength.toLowerCase() + '">' + sig.strength + '</span>' +
+        (seenBefore ? '<span class="badge repeat">Seen ' + esc(h.firstSeen) + ' · don\'t repeat</span>' : '') +
+        '<span class="meta">' + esc(sig.sub) + ' · ' + esc(sig.author) + ' · ' + esc(sig.meta) + '</span>' +
+      '</div>' +
+      '<h2><a href="' + esc(sig.url) + '" target="_blank" rel="noopener">' + esc(sig.title) + '</a></h2>' +
+      '<p class="summary">' + esc(sig.summary) + '</p>' +
+      '<p class="whyfit">Why it fits: ' + esc(sig.whyfit) + '</p>' +
+      '<textarea id="draft-' + i + '" spellcheck="false"></textarea>' +
+      '<div class="actions">' +
+        '<button class="copy" data-i="' + i + '">Copy reply</button>' +
+        '<a class="open" href="' + esc(sig.url) + '" target="_blank" rel="noopener">Open thread ↗</a>' +
+        '<label class="posted-toggle"><input type="checkbox" data-key="' + esc(sig.url) + '"' +
+          (h.posted ? ' checked' : '') + '> Posted</label>' +
+      '</div>';
+    cards.appendChild(card);
+    card.querySelector('textarea').value = sig.draft;
+  });
+
+  // ---- Replies to your comments ----
+  var repWrap = document.getElementById('replies');
+  var replies = data.replies || [];
+  document.getElementById('reply-count').textContent = replies.length;
+  if (!replies.length) {
+    repWrap.innerHTML = '<div class="empty">No replies found in the latest scan. New responses to your comments will show up here with suggested actions.</div>';
+  }
+  replies.forEach(function (rep, i) {
+    var card = document.createElement('section');
+    card.className = 'card';
+    var actionsHtml = (rep.actions || []).map(function (a, j) {
+      return '<details class="hist-item" style="margin-top:8px;"><summary><span class="title">' + esc(a.label) + '</span></summary>' +
+        '<div class="hist-body"><textarea id="rep-draft-' + i + '-' + j + '" spellcheck="false"></textarea>' +
+        '<div class="actions"><button class="copy" data-rep="' + i + '-' + j + '">Copy reply</button></div></div></details>';
+    }).join('');
+    card.innerHTML =
+      '<div class="row">' +
+        '<span class="badge medium">Reply</span>' +
+        '<span class="meta">' + esc(rep.from) + ' · ' + esc(rep.thread) + (rep.received ? ' · ' + esc(rep.received) : '') + '</span>' +
+      '</div>' +
+      '<p class="summary" style="margin-top:8px;">"' + esc(rep.snippet) + '"</p>' +
+      actionsHtml +
+      '<div class="actions"><a class="open" href="' + esc(rep.url) + '" target="_blank" rel="noopener">Open thread ↗</a></div>';
+    repWrap.appendChild(card);
+    (rep.actions || []).forEach(function (a, j) {
+      card.querySelector('#rep-draft-' + i + '-' + j).value = a.draft || '';
+    });
+  });
+
+  // ---- History section (everything from previous days) ----
+  var histWrap = document.getElementById('history');
+  var past = Object.keys(history).filter(function (url) {
+    return history[url].firstSeen !== data.date || !todayUrls[url];
+  }).sort(function (a, b) {
+    return history[b].firstSeen < history[a].firstSeen ? -1 : 1;
+  });
+  document.getElementById('hist-count').textContent = past.length;
+  if (!past.length) {
+    histWrap.innerHTML = '<div class="empty">Nothing yet. Past days\' signals will collect here automatically.</div>';
+  }
+  past.forEach(function (url, i) {
+    var h = history[url];
+    var el = document.createElement('details');
+    el.className = 'hist-item' + (h.posted ? ' answered' : '');
+    el.innerHTML =
+      '<summary>' +
+        '<span class="status-dot ' + (h.posted ? 'dot-posted' : 'dot-skipped') + '" title="' + (h.posted ? 'Answered' : 'Not answered') + '"></span>' +
+        '<span class="title">' + esc(h.title) + '</span>' +
+        '<span class="hist-meta">' + esc(h.sub) + ' · ' + esc(h.firstSeen) + ' · ' + (h.posted ? 'answered' : 'not answered') + '</span>' +
+      '</summary>' +
+      '<div class="hist-body">' +
+        '<p class="summary">' + esc(h.summary || '') + '</p>' +
+        '<textarea id="hist-draft-' + i + '" spellcheck="false"></textarea>' +
+        '<div class="actions">' +
+          '<button class="copy" data-hist="' + i + '">Copy reply</button>' +
+          '<a class="open" href="' + esc(url) + '" target="_blank" rel="noopener">Open thread ↗</a>' +
+          '<label class="posted-toggle"><input type="checkbox" data-key="' + esc(url) + '"' +
+            (h.posted ? ' checked' : '') + '> Posted</label>' +
+        '</div>' +
+      '</div>';
+    histWrap.appendChild(el);
+    el.querySelector('textarea').value = h.draft || '';
+  });
+
+  // ---- Shared handlers ----
+  function copyHandler(e) {
+    var btn = e.target.closest('button.copy');
+    if (!btn) return;
+    var ta;
+    if (btn.dataset.i !== undefined) ta = document.getElementById('draft-' + btn.dataset.i);
+    else if (btn.dataset.rep !== undefined) ta = document.getElementById('rep-draft-' + btn.dataset.rep);
+    else ta = document.getElementById('hist-draft-' + btn.dataset.hist);
+    ta.select();
+    function ok() {
+      btn.textContent = 'Copied ✓'; btn.classList.add('done');
+      setTimeout(function(){ btn.textContent = 'Copy reply'; btn.classList.remove('done'); }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(ok, function(){ document.execCommand('copy'); ok(); });
+    } else { document.execCommand('copy'); ok(); }
+  }
+  function toggleHandler(e) {
+    var cb = e.target.closest('input[type=checkbox]');
+    if (!cb) return;
+    var url = cb.dataset.key;
+    if (history[url]) { history[url].posted = cb.checked; save(); }
+    // sync every checkbox + card for this URL
+    document.querySelectorAll('input[data-key="' + CSS.escape(url) + '"]').forEach(function (other) {
+      other.checked = cb.checked;
+      var card = other.closest('.card');
+      if (card) card.classList.toggle('posted', cb.checked);
+      var hist = other.closest('.hist-item');
+      if (hist) hist.classList.toggle('answered', cb.checked);
+    });
+  }
+  document.body.addEventListener('click', copyHandler);
+  document.body.addEventListener('change', toggleHandler);
+
+  // ---- Toolbar ----
+  document.getElementById('export').addEventListener('click', function () {
+    var btn = this;
+    navigator.clipboard.writeText(JSON.stringify(history, null, 2)).then(function () {
+      btn.textContent = 'Copied ✓';
+      setTimeout(function(){ btn.textContent = 'Copy history as JSON'; }, 1800);
+    });
+  });
+  document.getElementById('clear').addEventListener('click', function () {
+    if (confirm('Clear all history? This can\'t be undone.')) {
+      history = {}; save(); location.reload();
+    }
+  });
+})();
+</script>
+</body>
+</html>

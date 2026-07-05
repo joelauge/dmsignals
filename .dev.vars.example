@@ -1,0 +1,9 @@
+# Copy to .dev.vars for local `wrangler dev` testing. NEVER commit real values.
+# Production values are set with: wrangler secret put <NAME>
+REDDIT_CLIENT_ID=xxx
+REDDIT_CLIENT_SECRET=xxx
+REDDIT_USERNAME=your_reddit_username
+REDDIT_PASSWORD=xxx
+ANTHROPIC_API_KEY=sk-ant-xxx
+RESEND_API_KEY=re_xxx
+ADMIN_KEY=any-long-random-string

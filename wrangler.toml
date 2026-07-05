@@ -1,0 +1,22 @@
+name = "new-dm-radar"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+# Poll every 2 hours; digest daily at 13:00 UTC (9am ET)
+[triggers]
+crons = ["0 */2 * * *", "0 13 * * *"]
+
+[[kv_namespaces]]
+binding = "LEADS"
+id = "aa7e6d4a4e4c408a8bba24884a86cad9"
+
+[vars]
+EMAIL_FROM = "New DM Radar <radar@theultimategamemaster.com>"
+EMAIL_TO = "joelauge@gmail.com"
+INSTANT_HOT = "false"   # "true" = also email immediately when score >= 60
+
+# Secrets (set via `wrangler secret put <NAME>`):
+#   REDDIT_CLIENT_ID
+#   REDDIT_CLIENT_SECRET
+#   RESEND_API_KEY
+#   ADMIN_KEY          (any random string, guards /run and /digest test URLs)
