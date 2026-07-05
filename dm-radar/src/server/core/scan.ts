@@ -132,43 +132,50 @@ export async function runScan(): Promise<Day> {
       day.best = 'No anthropic-api-key app setting configured.';
       console.error('scan: anthropic-api-key setting is empty, skipping drafting');
     } else {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: HAIKU_MODEL,
-          max_tokens: 4000,
-          messages: [
-            {
-              role: 'user',
-              content: `You are selecting sales signals for a TTRPG accessories company and drafting Reddit replies for HUMAN review (never auto-posted).\n\n${PRODUCT_CONTEXT}\n\n${STYLE_RULES}\n\nBelow are candidate Reddit posts (JSON). Select the 3-5 strongest buying/need signals: new DMs asking what to buy or how to start, digital-to-physical transitions, GM screen / initiative tracking / table setup / displaying art at the table / session prep organization questions. Skip pure rules questions, memes, art showcases.\n\nReturn ONLY valid JSON, no markdown fences: {"best":"one sentence naming today's single best opportunity and why","signals":[{"strength":"High|Medium|Low","sub":"r/...","author":"u/...","meta":"<ageHrs> hr old · <comments> comments","title":"...","url":"...","summary":"one line","whyfit":"one line","draft":"the full reply text"}]}\n\nCandidates:\n${JSON.stringify(
-                candidates.map(({ permalink: _permalink, ...rest }) => rest)
-              )}`,
-            },
-          ],
-        }),
-      });
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: HAIKU_MODEL,
+            max_tokens: 4000,
+            messages: [
+              {
+                role: 'user',
+                content: `You are selecting sales signals for a TTRPG accessories company and drafting Reddit replies for HUMAN review (never auto-posted).\n\n${PRODUCT_CONTEXT}\n\n${STYLE_RULES}\n\nBelow are candidate Reddit posts (JSON). Select the 3-5 strongest buying/need signals: new DMs asking what to buy or how to start, digital-to-physical transitions, GM screen / initiative tracking / table setup / displaying art at the table / session prep organization questions. Skip pure rules questions, memes, art showcases.\n\nReturn ONLY valid JSON, no markdown fences: {"best":"one sentence naming today's single best opportunity and why","signals":[{"strength":"High|Medium|Low","sub":"r/...","author":"u/...","meta":"<ageHrs> hr old · <comments> comments","title":"...","url":"...","summary":"one line","whyfit":"one line","draft":"the full reply text"}]}\n\nCandidates:\n${JSON.stringify(
+                  candidates.map(({ permalink: _permalink, ...rest }) => rest)
+                )}`,
+              },
+            ],
+          }),
+        });
 
-      if (res.ok) {
-        try {
-          const body = (await res.json()) as { content: { text: string }[] };
-          const text = (body.content[0]?.text ?? '').trim().replace(/^```json\s*|\s*```$/g, '');
-          const out = JSON.parse(text) as { best?: string; signals?: Signal[] };
-          day.signals = out.signals ?? [];
-          day.best = out.best ?? day.best;
-          day.found = day.signals.length;
-          console.log(`scan: Haiku selected ${day.found} of ${candidates.length} candidates`);
-        } catch (error) {
-          day.best = 'Failed to parse Haiku output.';
-          console.error(`scan: Haiku output parse failed: ${error}`);
+        if (res.ok) {
+          try {
+            const body = (await res.json()) as { content: { text: string }[] };
+            const text = (body.content[0]?.text ?? '').trim().replace(/^```json\s*|\s*```$/g, '');
+            const out = JSON.parse(text) as { best?: string; signals?: Signal[] };
+            day.signals = out.signals ?? [];
+            day.best = out.best ?? day.best;
+            day.found = day.signals.length;
+            console.log(`scan: Haiku selected ${day.found} of ${candidates.length} candidates`);
+          } catch (error) {
+            day.best = 'Failed to parse Haiku output.';
+            console.error(`scan: Haiku output parse failed: ${error}`);
+          }
+        } else {
+          day.best = `Haiku call failed (${res.status}). Check the API key in app settings.`;
+          console.error(`scan: Haiku call failed: ${res.status} ${await res.text()}`);
         }
-      } else {
-        day.best = `Haiku call failed (${res.status}). Check the API key in app settings.`;
-        console.error(`scan: Haiku call failed: ${res.status} ${await res.text()}`);
+      } catch (error) {
+        // Devvit blocks fetches to domains Reddit hasn't approved yet; don't let
+        // that (or any network failure) kill the rest of the run.
+        day.best = `Drafting unavailable: ${candidates.length} candidate(s) found but the Claude call failed. Likely the api.anthropic.com domain exception is still pending Reddit approval.`;
+        console.error(`scan: Haiku fetch threw: ${error}`);
       }
     }
   } else {
@@ -279,11 +286,16 @@ async function sendDigestPm(day: Day): Promise<void> {
     .map((r) => `**${r.from}** on "${r.thread}" (${r.received})\n> ${r.snippet.split('\n').join('\n> ')}\n${r.url}\n`)
     .join('\n');
 
-  await reddit.sendPrivateMessage({
-    to,
-    subject: `DM Signals ${day.date}: ${day.found} opportunities${day.replies.length ? `, ${day.replies.length} replies` : ''}`,
-    text: `Scanned ${day.scanned}.\n\n⭐ **Best:** ${day.best}\n\n${day.replies.length ? `**Replies to you:**\n\n${replyLines}\n---\n\n` : ''}${lines || 'None today.'}\n\n🎟 Reminder: FIRSTTIMEGM = free Session Zero Checklist for new GMs (only when it truly fits).\n\n_Drafts are never auto-posted. Copy, tweak, post manually._`,
-  });
+  try {
+    await reddit.sendPrivateMessage({
+      to,
+      subject: `DM Signals ${day.date}: ${day.found} opportunities${day.replies.length ? `, ${day.replies.length} replies` : ''}`,
+      text: `Scanned ${day.scanned}.\n\n⭐ **Best:** ${day.best}\n\n${day.replies.length ? `**Replies to you:**\n\n${replyLines}\n---\n\n` : ''}${lines || 'None today.'}\n\n🎟 Reminder: FIRSTTIMEGM = free Session Zero Checklist for new GMs (only when it truly fits).\n\n_Drafts are never auto-posted. Copy, tweak, post manually._`,
+    });
+    console.log(`digest: PM sent to u/${to}`);
+  } catch (error) {
+    console.error(`digest: PM to u/${to} failed: ${error}`);
+  }
 }
 
 async function sendDigestEmail(day: Day): Promise<void> {
@@ -330,21 +342,28 @@ async function sendDigestEmail(day: Day): Promise<void> {
     <p style="font-size:12px;color:#8a8072;">🎟 Reminder: FIRSTTIMEGM = free Session Zero Checklist for new GMs. Drafts are never auto-posted.</p>
   </div>`;
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject: `DM Signals ${day.date}: ${day.found} opportunities${day.replies.length ? `, ${day.replies.length} replies` : ''}`,
-      html,
-    }),
-  });
-  if (!res.ok) {
-    console.error(`Resend failed: ${res.status} ${await res.text()}`);
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject: `DM Signals ${day.date}: ${day.found} opportunities${day.replies.length ? `, ${day.replies.length} replies` : ''}`,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      console.error(`digest: Resend failed: ${res.status} ${await res.text()}`);
+    } else {
+      console.log(`digest: email sent to ${to}`);
+    }
+  } catch (error) {
+    // Likely the api.resend.com domain exception is still pending Reddit approval.
+    console.error(`digest: Resend fetch threw: ${error}`);
   }
 }
 
