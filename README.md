@@ -77,7 +77,7 @@ Add a `CLOUDFLARE_API_TOKEN` repo secret (Cloudflare dashboard -> API Tokens -> 
 
 ## dm-radar/ (Devvit companion)
 
-`dm-radar/` is a separate Devvit app that runs natively on Reddit: daily scan, Redis dedup, Haiku drafts, digest as a Reddit PM, and a pinnable dashboard custom post. It runs as its own app account and so **cannot** read your personal inbox — that stays the Worker's job. See `dm-radar/README-dm-radar.md`.
+`dm-radar/` is a separate Devvit app (the `@devvit/web` React + Hono template) that runs natively on Reddit: daily scan, Redis dedup, Haiku drafts, digest as a Reddit PM, and a pinnable dashboard custom post (splash + expanded React views). It runs as its own app account and so **cannot** read your personal inbox — that stays the Worker's job. See `dm-radar/README.md` for its own setup and commands.
 
 ## Notes
 

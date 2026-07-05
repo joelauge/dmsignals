@@ -1,0 +1,77 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "dmradarreact",
+  "post": {
+    "dir": "dist/client",
+    "entrypoints": {
+      "default": {
+        "inline": true,
+        "entry": "splash.html"
+      },
+      "game": {
+        "entry": "game.html"
+      }
+    }
+  },
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.cjs"
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "DM Radar: create dashboard post",
+        "description": "Pin this in your subreddit",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/post-create"
+      },
+      {
+        "label": "DM Radar: scan now",
+        "description": "Run the scan + draft pipeline immediately",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/scan-now"
+      }
+    ]
+  },
+  "triggers": {
+    "onAppInstall": "/internal/triggers/on-app-install"
+  },
+  "scheduler": {
+    "tasks": {
+      "daily-scan": {
+        "endpoint": "/internal/scheduler/daily-scan",
+        "cron": "0 11 * * *"
+      }
+    }
+  },
+  "permissions": {
+    "redis": true,
+    "reddit": {
+      "scope": "user"
+    },
+    "http": {
+      "domains": ["api.anthropic.com"]
+    }
+  },
+  "settings": {
+    "global": {
+      "anthropic-api-key": {
+        "type": "string",
+        "label": "Anthropic API key (Claude Haiku drafting)",
+        "isSecret": true
+      }
+    },
+    "subreddit": {
+      "digest-username": {
+        "type": "string",
+        "label": "Reddit username to DM the daily digest to (no u/ prefix)"
+      }
+    }
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  }
+}
